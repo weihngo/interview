@@ -1,7 +1,7 @@
 # 面试
 ## 比赛相关
-### 一、语义分割比赛
-#### deeplabv3发展历程
+### 一、语义分割
+#### 1、deeplabv3发展历程
 1. deeplabv1
     - 采用vgg16前向计算，减少了后两个池化层以减少图像下采样，为保证视野采用空洞卷积
     - 使用1x1卷积替换全连接层实现全卷积网络
@@ -17,10 +17,11 @@
     - 将deeplabv3看成Encoder-Deconder结构
     - 借鉴MobileNet简化卷积
     - 使用修改过的Xception
-#### 医学中Unet和Deeplabv3对比
+
+#### 2、医学中Unet和Deeplabv3对比
 相比于FCN和Deeplab等，UNet共进行了4次上采样，并在同一个stage使用了skip connection，而不是直接在高级语义特征上进行监督和loss反传，这样就保证了最后恢复出来的特征图融合了更多的low-level的feature，也使得不同scale的feature得到了的融合，从而可以进行多尺度预测和DeepSupervision。4次上采样也使得分割图恢复边缘等信息更加精细。
 
-#### 语义分割loss
+#### 3、语义分割loss
 1. 交叉熵loss
 2. 带权交叉熵loss
 3. focal loss：解决样本数量不平衡，在二元交叉熵损失前面加参数a的基础上，将高置信度样本的损失降低一些，即动态a
