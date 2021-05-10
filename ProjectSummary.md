@@ -34,6 +34,20 @@ anchor-free发展：DenseBox、YOLO、CornerNet、ExtremeNet、FSAF、FCOS、Fov
     - 为提升推理速度，我们对图像前处理、推理、后处理三个过程做了数据流水，通过多线程实现，并采用加锁后的管道通信维护数据读写一致。最后使得在cpu资源占用最少的前提下达到计算速度最优。
     - 为使得模型更小更快，网络训练过程中采用剪枝方式进行模型压缩，通过对特征图各通道图层的重要性进行通道剪枝，大幅减少网络参数量和计算量，最后将300+MB的yolov3模型压缩至30+MB，并由于模型剪枝解决了网络过拟合问题，最后在测试集的精度表现更优
 
-- 
-
-
+- 模型剪枝
+  - 神经元重要性衡量方法：
+    - **思路一：** 按参数的绝对值大小评估重要性，贪心的选择部分删去。在训练时针对性的在损失函数中加入L1正则化，使得权重稀疏化。此外，重要性还可以作用在归一化层和激活函数上：
+      - 在BN层加入channel-wise scaling factor 并对之加L1 regularizer使之稀疏，然后裁剪scaling factor值小的部分对应权重；
+      - 像Relu这样的激活函数会倾向产生稀疏的activation；而权重相对而言不太容易是稀疏的（当前，如前所说，我们可以通过regularizer这种外力使它变得稀疏）。
+    - **思路二：** 考虑参数裁剪对loss的影响。《Pruning Convolutional Neural Networks for Resource Efficient Transfer Learning》采用的是目标函数相对于activation的展开式中一阶项的绝对值作为pruning的criteria，这样就避免了二阶项（即Hessian矩阵）的计算。2018年论文《SNIP: Single-shot Network Pruning based on Connection Sensitivity》将归一化的目标函数相对于参数的导数绝对值作为重要性的衡量指标。
+    - **思路三：** 考虑对特征输出的可重建性的影响，即最小化裁剪后网络对于特征输出的重建误差。如果对当前层进行裁剪，然后如果它对后面输出还没啥影响，那说明裁掉的是不太重要的信息。
+      - 通过最小化特征重建误差（Feature reconstruction error）来确定哪些channel需要裁剪，裁剪方法包括：贪心法，LASSO regression。
+      - NISP（Neuron importance score propagation）算法通过最小化分类网络倒数第二层的重建误差，并将重要性信息反向传播到前面以决定哪些channel需要裁剪。
+      - DCP（Discrimination-aware channel pruning）方法一方面在中间层添加额外的discrimination-aware loss（用以强化中间层的判别能力），另一方面也考虑特征重建误差的loss，综合两方面loss对于参数的梯度信息，决定哪些为需要被裁剪的channel。
+    - **思路四：** 基于其它的准则对权重进行重要性排序。FPGM（Filter Pruning via Geometric Median）方法，基本思想是基于geometric median来去除冗余的参数。我们知道贪心算法的缺点就是只能找到局部最优解，因为它忽略了参数间的相互关系。那自然肯定会有一些方法会尝试考虑参数间的相互关系，试图找导全局更优解。
+  - 剪枝方法：
+    - **离散空间下的搜索：** 如2015年的论文《Structured Pruning of Deep Convolutional Neural Networks》基于genetic algorithm与particle filter来进行网络的pruning。2017年的论文《N2N Learning: Network to Network Compression via Policy Gradient Reinforcement Learning》尝试将网络的压缩分成两个阶段-layer removal和layer shrinkage，并利用强化学习（Reinforcement learning）分别得到两个阶段的策略。
+    - **规划问题：** 如比较新的2019年论文《Collaborative Channel Pruning for Deep Networks》提出CCP（Collaborative channel pruning）方法，它考虑了channel间的依赖关系 ，将channel选取问题形式化为约束下的二次规划问题，再用SQP（Sequential quadratic programming）求解。
+    - **Bayesian方法：** 如2017年论文《Variational Dropout Sparsifies Deep Neural Networks》提出了sparse variational droput。它对variational droput进行扩展使之可以对dropout rate进行调节，最终得到稀疏解从而起到裁剪模型的效果。
+    - **基于梯度的方法：** 回顾上面问题定义中的数学最优化问题，其最恶心的地方在于regularizer中那个L0-norm，使目标不可微，从而无法用基于梯度的方法来求解。如2017年的论文《Learning Sparse Neural Networks through L0 Regularization》的思路是用一个连续的分布结合 hard-sigmoid recification去近似它，从而使目标函数平滑，这样便可以用基于梯度的方法求解。
+    - **基于聚类的方法：** 一般地，对于压缩问题有一种方法就是采用聚类。如将图片中的颜色进行聚类，就可以减小其编码长度。类似地，在模型压缩中也可以用聚类的思想。如2018年的论文《SCSP: Spectral Clustering Filter Pruning with Soft Self-adaption Manners》和《Exploring Linear Relationship in Feature Map Subspace for ConvNets Compression》分别用谱聚类和子空间聚类发掘filter和feature map中的相关信息，从而对参数进行简化压缩。
