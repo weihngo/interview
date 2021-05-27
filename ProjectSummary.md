@@ -26,6 +26,13 @@ anchor-free发展：DenseBox、YOLO、CornerNet、ExtremeNet、FSAF、FCOS、Fov
 
 移植模型有：MobileNetV2-SSD、VGG16-SSD、普通yolov3模型和遥感目标识别的yolov3模型。遥感目标识别采用darknet的yolov3通过对大尺寸遥感图像切割进行训练，并采用一些数据增强方法（翻转、色彩调整、裁剪、随机擦除等）。
 
+- 模型开发
+  - yolov3
+    1. 以darknet-53为backbone进行特征提取（只取52层）
+    2. 三次检测：32、16、8倍下采样，多尺度的feature map上检测和SSD有点像。在网络中使用上采用的原因：网络越深效果越好，可以利用深层特征进行目标检测。如16倍下采样的特征是由32倍的特征上采样与浅层特征concat得到的。
+    3. 对图像中的object采用k-means聚类。feature map中的每一个cell都会预测3个边界框，每个边界框都会预测三个东西。
+    4. Bounding box它输出的是框的位置（中心坐标与宽高），confidence以及N个类别；anchor box只是一个尺度即只有宽高。
+
 - 模型移植
   - nvidia设备可以直接运行darknet模型，并根据darknet转tensorrt进行推理加速。
   - rk3399中将darknet训练所得模型通过fp16量化成rknn模型，并根据测试集提供的示例图片进行参数微调
