@@ -20,6 +20,14 @@ A：有，主要了解SSD和YOLO等anchor-based模型和centerNet等anchor-free�
 
 anchor-free发展：DenseBox、YOLO、CornerNet、ExtremeNet、FSAF、FCOS、FoveaBox。
 
+## 四、卫星图像地形分割模型开发及集群部署
+### 项目介绍
+本项目主要针对卫星航拍图像进行地形分割任务，其中包括：河流、湖泊、山地、平原等地形，并将开发模型部署在GPU集群上提供API服务。
+
+模型开发流程：
+- 主要负责使用 pytorch 实现图像语义分割模型，先后尝试了deeplabv3+/Unet/PSPNet等分割算法，最终发现Encoder为EfficientNet B6的Unet模型可以达到最优分割效果，并采用多种backbone模型融合可有一定提升。
+- 最后使用Albumentations库进行数据增强（翻转，色彩调整，裁剪，随机擦除等），调整训练Loss（0.5*DiceLoss，0.25*Cross Entropy Loss，0.25*Lovasz Loss），达到最终的成绩。 
+
 ## 三、基于异构边缘推理设备的目标识别系统
 ### 项目介绍
 本项目是由20个异构推理节点组成的推理后端，其中包括：agx、TX2、瑞芯微RK3399、寒武纪智能计算卡等设备，并将YOLO、SSD等剪枝量化后的目标识别模型部署在各设备上，由服务端统一调度。在服务端中根据神经网络结构来分析其在各硬件上的性能表征，再通过改进后的粒子群做任务调度。本人主要负责异构平台的系统及运行库适配工作，针对异构平台的神经网络模型移植、编写推理终端中的目标识别程序，并与服务端进行socket通信，以及调度算法设计。
